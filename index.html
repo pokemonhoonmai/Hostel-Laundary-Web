@@ -1,0 +1,2566 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hostel Laundry Share • Wash Pools & Cycle Sharing</title>
+    <meta name="description" content="A minimalist, Linear-style hostel laundry-sharing application to coordinate wash cycles, share machines across Block A and B, join pools, and chat with members." />
+    <meta property="og:title" content="Hostel Laundry Share • Wash Pools & Cycle Sharing" />
+    <meta property="og:description" content="Share wash cycles, coordinate laundry machines across Block A and Block B, and chat in real-time." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#f0fdfa',
+                100: '#ccfbf1',
+                500: '#14b8a6',
+                600: '#0d9488',
+                700: '#0f766e',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+      /* Notion / Linear minimalist scrollbars */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d4d4d8;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a1a1aa;
+      }
+
+      /* Modal transitions */
+      .modal-backdrop {
+        transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .modal-panel {
+        transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .modal-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .modal-hidden .modal-panel {
+        transform: scale(0.97) translateY(8px);
+        opacity: 0;
+      }
+
+      /* Subtle pulse on live badge */
+      @keyframes softPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.65; transform: scale(1.08); }
+      }
+      .pulse-dot {
+        animation: softPulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      /* Time Wheel Drum styling */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .wheel-drum-item {
+        height: 36px;
+        min-height: 36px;
+        max-height: 36px;
+        line-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        scroll-snap-align: center;
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.15s ease, font-weight 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .wheel-item-active {
+        color: #18181b !important;
+        font-weight: 700 !important;
+        transform: scale(1.14);
+      }
+      .wheel-item-inactive {
+        color: #a1a1aa;
+        font-weight: 500;
+        transform: scale(0.92);
+      }
+      .wheel-item-inactive:hover {
+        color: #52525b;
+      }
+
+      /* Cross-browser Date Input normalization to prevent baseline overflow */
+      input[type="date"] {
+        appearance: none;
+        -webkit-appearance: none;
+        box-sizing: border-box;
+        min-height: 40px !important;
+        height: 40px !important;
+        line-height: 40px !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+      }
+      input[type="date"]::-webkit-datetime-edit {
+        display: inline-flex !important;
+        align-items: center !important;
+        height: 100% !important;
+        padding: 0 !important;
+        line-height: normal !important;
+      }
+      input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+        display: inline-flex !important;
+        align-items: center !important;
+        height: 100% !important;
+        padding: 0 !important;
+      }
+      input[type="date"]::-webkit-datetime-edit-text,
+      input[type="date"]::-webkit-datetime-edit-month-field,
+      input[type="date"]::-webkit-datetime-edit-day-field,
+      input[type="date"]::-webkit-datetime-edit-year-field {
+        padding: 0 1px !important;
+        line-height: normal !important;
+      }
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer !important;
+        padding: 4px !important;
+        opacity: 0.65;
+        transition: opacity 0.15s ease;
+      }
+      input[type="date"]::-webkit-calendar-picker-indicator:hover {
+        opacity: 1;
+      }
+    </style>
+  </head>
+
+  <body class="bg-[#fafafa] text-zinc-900 font-sans antialiased min-h-screen flex flex-col selection:bg-zinc-200">
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-zinc-200/80">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <!-- Logo & Title -->
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-zinc-900 text-white flex items-center justify-center shadow-sm">
+            <!-- Washing Machine Icon -->
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="2" width="18" height="20" rx="3"></rect>
+              <circle cx="12" cy="13" r="5"></circle>
+              <path d="M12 10a3 3 0 0 1 3 3"></path>
+              <circle cx="7" cy="5" r="1" fill="currentColor"></circle>
+              <circle cx="10" cy="5" r="1" fill="currentColor"></circle>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base font-semibold tracking-tight text-zinc-900">Hostel Laundry Share</h1>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200/70">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot"></span>
+                Active
+              </span>
+            </div>
+            <p class="text-xs text-zinc-500 hidden sm:block">Blocks A & B • Machine sharing & split wash cycles</p>
+          </div>
+        </div>
+
+        <!-- Right: Current User indicator & Host Button -->
+        <div class="flex items-center gap-2.5">
+          <!-- User Profile / Room badge button -->
+          <button
+            id="userProfileBtn"
+            onclick="openUserProfileModal()"
+            title="Update your resident profile"
+            class="hidden sm:inline-flex items-center gap-2 text-xs font-medium text-zinc-600 bg-zinc-50 hover:bg-zinc-100 hover:text-zinc-900 px-2.5 py-1.5 rounded-lg border border-zinc-200 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span id="navUserDisplay">Set Room Profile</span>
+          </button>
+
+          <!-- Host a Wash Button -->
+          <button
+            id="hostWashBtn"
+            onclick="openHostModal()"
+            class="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded-lg shadow-sm transition-colors active:scale-[0.98]"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Host a Wash</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <!-- Machines Overview Banner (Hostel Infrastructure) -->
+      <section class="bg-white border border-zinc-200 rounded-xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3.5 border-b border-zinc-100">
+          <div>
+            <h2 class="text-sm font-semibold text-zinc-900 flex items-center gap-2">
+              <span>Hostel Laundry Facilities</span>
+              <span class="text-xs font-normal text-zinc-500">• 3 Total Machines Available</span>
+            </h2>
+            <p class="text-xs text-zinc-500 mt-0.5">Pools allow 2 to 4 residents to share one wash cycle, saving water, power & laundry coins.</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-zinc-500">
+            <span class="inline-flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Available
+            </span>
+            <span class="text-zinc-300">|</span>
+            <span class="inline-flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span> In Pool
+            </span>
+          </div>
+        </div>
+
+        <!-- Machine Status Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3.5" id="machineStatusBar">
+          <!-- Filled dynamically by renderMachineStatus() -->
+        </div>
+      </section>
+
+      <!-- Feed Controls: Filters & Search -->
+      <section class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <!-- Block filter tabs -->
+        <div class="inline-flex p-1 bg-zinc-100 rounded-lg border border-zinc-200/80 text-xs font-medium text-zinc-600">
+          <button
+            onclick="setFilter('all')"
+            id="tab-all"
+            class="px-3 py-1.5 rounded-md transition-colors bg-white text-zinc-900 shadow-sm"
+          >
+            All Pools (<span id="count-all">0</span>)
+          </button>
+          <button
+            onclick="setFilter('Block A')"
+            id="tab-Block A"
+            class="px-3 py-1.5 rounded-md transition-colors hover:text-zinc-900 text-zinc-600"
+          >
+            Block A (Machine A1)
+          </button>
+          <button
+            onclick="setFilter('Block B')"
+            id="tab-Block B"
+            class="px-3 py-1.5 rounded-md transition-colors hover:text-zinc-900 text-zinc-600"
+          >
+            Block B (B1 & B2)
+          </button>
+          <button
+            onclick="setFilter('open')"
+            id="tab-open"
+            class="px-3 py-1.5 rounded-md transition-colors hover:text-zinc-900 text-zinc-600"
+          >
+            Open Slots Only
+          </button>
+        </div>
+
+        <!-- Right Quick Stats & Search -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1 sm:w-56">
+            <svg class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="text"
+              id="searchInput"
+              oninput="handleSearch(this.value)"
+              placeholder="Filter by host, room, machine..."
+              class="w-full bg-white border border-zinc-200 text-zinc-800 text-xs pl-8 pr-3 py-1.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 placeholder:text-zinc-400 transition"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Pools Feed -->
+      <section id="poolsFeed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered dynamically by renderPoolsFeed() -->
+      </section>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden bg-white border border-dashed border-zinc-300 rounded-xl p-12 text-center">
+        <div class="w-12 h-12 rounded-full bg-zinc-100 text-zinc-400 mx-auto flex items-center justify-center mb-3">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="2" width="18" height="20" rx="3"></rect>
+            <circle cx="12" cy="13" r="5"></circle>
+            <path d="M12 10a3 3 0 0 1 3 3"></path>
+          </svg>
+        </div>
+        <h3 class="text-sm font-semibold text-zinc-800">No active pools found</h3>
+        <p class="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
+          There are currently no scheduled laundry pools matching this view. Start one now and invite roommates to join!
+        </p>
+        <button
+          onclick="openHostModal()"
+          class="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium px-3.5 py-2 rounded-lg transition"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Host the First Wash
+        </button>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-zinc-200/80 bg-white/60 py-6">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
+        <div class="flex items-center gap-2">
+          <span class="font-medium text-zinc-700">Hostel Laundry Share</span>
+          <span>•</span>
+          <span>Block A (Machine A1) & Block B (Machines B1, B2)</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <button onclick="clearAllPools()" class="text-zinc-500 hover:text-zinc-800 underline underline-offset-2 transition-colors">
+            Clear All Pools
+          </button>
+          <span>•</span>
+          <span class="text-zinc-400">Session Storage Active</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 1: "Host a Wash" Modal -->
+    <!-- ========================================================================= -->
+    <div id="hostModal" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="modal-backdrop fixed inset-0 bg-zinc-900/40 backdrop-blur-sm" onclick="closeHostModal()"></div>
+
+      <div class="modal-panel relative bg-white border border-zinc-200 rounded-xl shadow-xl w-full max-w-lg overflow-hidden z-10 max-h-[92vh] flex flex-col">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+          <div>
+            <h3 class="text-sm font-semibold text-zinc-900">Host a Wash Cycle</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">Pick a machine and schedule a shared load (2 to 4 people).</p>
+          </div>
+          <button onclick="closeHostModal()" class="text-zinc-400 hover:text-zinc-700 p-1 rounded-md transition-colors">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Form Body -->
+        <form id="hostForm" onsubmit="handleCreatePool(event)" class="p-6 space-y-4 text-xs overflow-y-auto max-h-[calc(92vh-75px)]">
+          <!-- Host Identification Box -->
+          <div class="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3.5 space-y-3">
+            <span class="text-[11px] font-semibold text-zinc-700 uppercase tracking-wider block">Your Details (Host)</span>
+            <div>
+              <label class="block font-medium text-zinc-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+              <input
+                type="text"
+                id="hostName"
+                required
+                placeholder="Enter your full name"
+                class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-medium text-zinc-700 mb-1">Host Block <span class="text-red-500">*</span></label>
+                <select
+                  id="hostBlock"
+                  required
+                  onchange="syncMachineWithBlock(this.value)"
+                  class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+                >
+                  <option value="Block A">Block A</option>
+                  <option value="Block B">Block B</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-medium text-zinc-700 mb-1">Room Number <span class="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  id="hostRoom"
+                  required
+                  placeholder="e.g. 204"
+                  class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Machine Selection -->
+          <div>
+            <label class="block font-medium text-zinc-700 mb-1.5">Select Machine <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="relative flex flex-col p-2.5 border border-zinc-200 rounded-lg cursor-pointer hover:bg-zinc-50 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50 transition">
+                <input type="radio" name="machineChoice" value="Machine A1" data-block="Block A" checked class="peer sr-only" />
+                <span class="font-semibold text-zinc-800 text-xs">Machine A1</span>
+                <span class="text-[10px] text-zinc-500 mt-0.5">Block A • Floor 1</span>
+                <span class="absolute top-2 right-2 w-2 h-2 rounded-full border border-zinc-300 peer-checked:bg-zinc-900 peer-checked:border-zinc-900"></span>
+              </label>
+
+              <label class="relative flex flex-col p-2.5 border border-zinc-200 rounded-lg cursor-pointer hover:bg-zinc-50 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50 transition">
+                <input type="radio" name="machineChoice" value="Machine B1" data-block="Block B" class="peer sr-only" />
+                <span class="font-semibold text-zinc-800 text-xs">Machine B1</span>
+                <span class="text-[10px] text-zinc-500 mt-0.5">Block B • Floor 1</span>
+                <span class="absolute top-2 right-2 w-2 h-2 rounded-full border border-zinc-300 peer-checked:bg-zinc-900 peer-checked:border-zinc-900"></span>
+              </label>
+
+              <label class="relative flex flex-col p-2.5 border border-zinc-200 rounded-lg cursor-pointer hover:bg-zinc-50 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50 transition">
+                <input type="radio" name="machineChoice" value="Machine B2" data-block="Block B" class="peer sr-only" />
+                <span class="font-semibold text-zinc-800 text-xs">Machine B2</span>
+                <span class="text-[10px] text-zinc-500 mt-0.5">Block B • Floor 2</span>
+                <span class="absolute top-2 right-2 w-2 h-2 rounded-full border border-zinc-300 peer-checked:bg-zinc-900 peer-checked:border-zinc-900"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Schedule: Date & Interactive Time Slot -->
+          <div class="space-y-3 bg-zinc-50/70 border border-zinc-200/80 rounded-lg p-3.5">
+            <div class="flex items-center justify-between">
+              <label class="block font-semibold text-zinc-800 text-xs">Wash Schedule <span class="text-red-500">*</span></label>
+              <span class="text-[11px] text-zinc-500">Pick date & custom hours</span>
+            </div>
+
+            <!-- Date Selector with Quick Pills -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="font-semibold text-zinc-800 text-xs flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span>Select Date <span class="text-red-500">*</span></span>
+                </label>
+                <div class="flex items-center gap-1" id="quickDatePills">
+                  <button
+                    type="button"
+                    onclick="setScheduleDate('today')"
+                    id="dateBtn-today"
+                    class="px-2.5 py-1 rounded-md border border-zinc-900 bg-zinc-900 text-white font-medium transition text-xs shadow-xs"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onclick="setScheduleDate('tomorrow')"
+                    id="dateBtn-tomorrow"
+                    class="px-2.5 py-1 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 transition text-xs"
+                  >
+                    Tomorrow
+                  </button>
+                </div>
+              </div>
+              <div class="relative">
+                <input
+                  type="date"
+                  id="poolDate"
+                  required
+                  onchange="handleDateInputChange(this.value)"
+                  class="w-full h-10 bg-white border border-zinc-200 rounded-lg px-3 text-xs font-medium text-zinc-800 focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 focus:outline-none transition shadow-2xs cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <!-- Time Selection Mode Toggle (Wheel vs Presets vs Manual) -->
+            <div class="pt-3 border-t border-zinc-200/70 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-zinc-800 text-xs flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span>Start Time</span>
+                </span>
+                <!-- 3-Way Mode Switcher -->
+                <div class="inline-flex p-0.5 bg-zinc-200/80 rounded-lg text-xs shadow-2xs">
+                  <button
+                    type="button"
+                    id="timeModeWheelBtn"
+                    onclick="setTimeMode('wheel')"
+                    class="px-2.5 py-1 rounded-md transition font-medium bg-white text-zinc-900 shadow-xs flex items-center gap-1"
+                  >
+                    <span>Wheel</span>
+                  </button>
+                  <button
+                    type="button"
+                    id="timeModePresetsBtn"
+                    onclick="setTimeMode('presets')"
+                    class="px-2.5 py-1 rounded-md transition font-medium text-zinc-600 hover:text-zinc-900"
+                  >
+                    Presets
+                  </button>
+                  <button
+                    type="button"
+                    id="timeModeCustomBtn"
+                    onclick="setTimeMode('custom')"
+                    class="px-2.5 py-1 rounded-md transition font-medium text-zinc-600 hover:text-zinc-900"
+                  >
+                    Manual
+                  </button>
+                </div>
+              </div>
+
+              <!-- VIEW 1: Interactive Time Selection Wheel -->
+              <div id="timeWheelContainer" class="space-y-2.5 pt-0.5">
+                <!-- Quick Wheel Shortcuts Bar -->
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-1 text-[11px] text-zinc-500 font-medium">
+                    <span>Roll drum or tap items:</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onclick="setWheelToNow()"
+                      title="Snap wheel to current time"
+                      class="text-[10px] px-2 py-0.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 font-medium transition flex items-center gap-1 shadow-2xs"
+                    >
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span>Now</span>
+                    </button>
+                    <button
+                      type="button"
+                      onclick="stepWheelHourOffset(1)"
+                      title="Add 1 hour"
+                      class="text-[10px] px-1.5 py-0.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 font-medium transition shadow-2xs"
+                    >
+                      +1h
+                    </button>
+                    <button
+                      type="button"
+                      onclick="setWheelExact(6, 0, 'PM')"
+                      title="Set to 6:00 PM"
+                      class="text-[10px] px-1.5 py-0.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 font-medium transition shadow-2xs"
+                    >
+                      6 PM
+                    </button>
+                    <button
+                      type="button"
+                      onclick="setWheelExact(8, 0, 'PM')"
+                      title="Set to 8:00 PM"
+                      class="text-[10px] px-1.5 py-0.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 font-medium transition shadow-2xs"
+                    >
+                      8 PM
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Cylindrical Wheel Chamber -->
+                <div class="relative bg-white border border-zinc-200/90 rounded-xl p-2.5 shadow-2xs overflow-hidden select-none">
+                  <!-- Stepper Up Row -->
+                  <div class="grid grid-cols-[1fr_auto_1fr_1fr] items-center gap-1.5 mb-1 relative z-30">
+                    <button
+                      type="button"
+                      tabindex="-1"
+                      onclick="stepWheel('hour', -1)"
+                      title="Step up 1 hour"
+                      class="w-full text-center py-0.5 text-[9px] text-zinc-400 hover:text-zinc-900 transition opacity-60 hover:opacity-100 flex items-center justify-center cursor-pointer"
+                    >
+                      ▲
+                    </button>
+                    <div class="w-2.5"></div>
+                    <button
+                      type="button"
+                      tabindex="-1"
+                      onclick="stepWheel('minute', -1)"
+                      title="Step up 5 mins"
+                      class="w-full text-center py-0.5 text-[9px] text-zinc-400 hover:text-zinc-900 transition opacity-60 hover:opacity-100 flex items-center justify-center cursor-pointer"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      tabindex="-1"
+                      onclick="stepWheel('ampm', -1)"
+                      title="Switch AM/PM"
+                      class="w-full text-center py-0.5 text-[9px] text-zinc-400 hover:text-zinc-900 transition opacity-60 hover:opacity-100 flex items-center justify-center cursor-pointer"
+                    >
+                      ▲
+                    </button>
+                  </div>
+
+                  <!-- Drums Viewport Chamber (Exact 108px high = 3 * 36px items) -->
+                  <div class="relative h-[108px] overflow-hidden rounded-lg">
+                    <!-- Horizontal Center Selection Lens with glass look - EXACT VERTICAL CENTER (36px from top, 36px tall) -->
+                    <div class="absolute top-[36px] inset-x-0 h-[36px] rounded-lg bg-zinc-900/[0.05] border border-zinc-300/80 pointer-events-none z-10 shadow-xs flex items-center justify-between px-3">
+                      <span class="w-1 h-2 rounded-full bg-zinc-400/50"></span>
+                      <span class="w-1 h-2 rounded-full bg-zinc-400/50"></span>
+                    </div>
+
+                    <!-- Top Cylinder 3D Fade Gradient -->
+                    <div class="absolute top-0 inset-x-0 h-9 bg-gradient-to-b from-white via-white/85 to-transparent pointer-events-none z-20"></div>
+                    <!-- Bottom Cylinder 3D Fade Gradient -->
+                    <div class="absolute bottom-0 inset-x-0 h-9 bg-gradient-to-t from-white via-white/85 to-transparent pointer-events-none z-20"></div>
+
+                    <!-- 3 Drums Grid: Hour | Colon | Minute | Period -->
+                    <div class="grid grid-cols-[1fr_auto_1fr_1fr] items-center gap-1.5 h-full relative z-0">
+                      <!-- 1. Hour Drum Column -->
+                      <div
+                        id="drumHour"
+                        class="w-full h-full overflow-y-auto scroll-smooth snap-y snap-mandatory no-scrollbar text-center py-[36px]"
+                      >
+                        <!-- Hour items 1 through 12 populated by script -->
+                      </div>
+
+                      <!-- Colon Separator (Vertically centered) -->
+                      <div class="text-zinc-400 font-bold text-base px-0.5 select-none z-15 flex items-center justify-center h-full leading-none">
+                        :
+                      </div>
+
+                      <!-- 2. Minute Drum Column -->
+                      <div
+                        id="drumMinute"
+                        class="w-full h-full overflow-y-auto scroll-smooth snap-y snap-mandatory no-scrollbar text-center py-[36px]"
+                      >
+                        <!-- Minute items 00, 05, 10...55 populated by script -->
+                      </div>
+
+                      <!-- 3. AM / PM Drum Column -->
+                      <div
+                        id="drumAmpm"
+                        class="w-full h-full overflow-y-auto scroll-smooth snap-y snap-mandatory no-scrollbar text-center py-[36px]"
+                      >
+                        <!-- AM and PM populated by script -->
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Stepper Down Row & Labels -->
+                  <div class="grid grid-cols-[1fr_auto_1fr_1fr] items-start gap-1.5 mt-1 relative z-30">
+                    <div class="flex flex-col items-center">
+                      <button
+                        type="button"
+                        tabindex="-1"
+                        onclick="stepWheel('hour', 1)"
+                        title="Step down 1 hour"
+                        class="w-full text-center py-0.5 text-[9px] text-zinc-400 hover:text-zinc-900 transition opacity-60 hover:opacity-100 flex items-center justify-center cursor-pointer"
+                      >
+                        ▼
+                      </button>
+                      <span class="text-[9px] uppercase tracking-wider text-zinc-400 font-semibold mt-0.5">Hour</span>
+                    </div>
+                    <div class="w-2.5"></div>
+                    <div class="flex flex-col items-center">
+                      <button
+                        type="button"
+                        tabindex="-1"
+                        onclick="stepWheel('minute', 1)"
+                        title="Step down 5 mins"
+                        class="w-full text-center py-0.5 text-[9px] text-zinc-400 hover:text-zinc-900 transition opacity-60 hover:opacity-100 flex items-center justify-center cursor-pointer"
+                      >
+                        ▼
+                      </button>
+                      <span class="text-[9px] uppercase tracking-wider text-zinc-400 font-semibold mt-0.5">Min</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                      <button
+                        type="button"
+                        tabindex="-1"
+                        onclick="stepWheel('ampm', 1)"
+                        title="Switch AM/PM"
+                        class="w-full text-center py-0.5 text-[9px] text-zinc-400 hover:text-zinc-900 transition opacity-60 hover:opacity-100 flex items-center justify-center cursor-pointer"
+                      >
+                        ▼
+                      </button>
+                      <span class="text-[9px] uppercase tracking-wider text-zinc-400 font-semibold mt-0.5">Period</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Cycle Duration Selector -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="block text-[11px] font-medium text-zinc-600">Cycle Duration</label>
+                    <span class="text-[10px] text-zinc-400">Total wash runtime</span>
+                  </div>
+                  <div class="grid grid-cols-4 gap-1.5">
+                    <button
+                      type="button"
+                      onclick="applyDurationMinutes(30, this)"
+                      class="duration-btn py-1 px-1.5 text-center rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-[11px] text-zinc-700 transition"
+                    >
+                      30m <span class="text-[9px] text-zinc-400 block">Quick</span>
+                    </button>
+                    <button
+                      type="button"
+                      onclick="applyDurationMinutes(45, this)"
+                      class="duration-btn py-1 px-1.5 text-center rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-[11px] text-zinc-700 transition"
+                    >
+                      45m <span class="text-[9px] text-zinc-400 block">Eco</span>
+                    </button>
+                    <button
+                      type="button"
+                      onclick="applyDurationMinutes(60, this)"
+                      class="duration-btn py-1 px-1.5 text-center rounded border border-zinc-900 bg-zinc-900 text-white font-medium text-[11px] transition shadow-xs"
+                    >
+                      60m <span class="text-[9px] text-zinc-300 block">Standard</span>
+                    </button>
+                    <button
+                      type="button"
+                      onclick="applyDurationMinutes(90, this)"
+                      class="duration-btn py-1 px-1.5 text-center rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-[11px] text-zinc-700 transition"
+                    >
+                      90m <span class="text-[9px] text-zinc-400 block">Heavy</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- VIEW 2: Presets Grid -->
+              <div id="timePresetsContainer" class="hidden grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  data-slot="10:00 AM - 11:00 AM"
+                  onclick="selectPresetSlot('10:00 AM - 11:00 AM', this)"
+                  class="preset-slot-btn text-left p-2 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition group"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-zinc-800 text-[11px] group-hover:text-zinc-900">10:00 - 11:00 AM</span>
+                    <span class="text-[9px] px-1 rounded bg-zinc-100 text-zinc-500">Morning</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  data-slot="2:00 PM - 3:00 PM"
+                  onclick="selectPresetSlot('2:00 PM - 3:00 PM', this)"
+                  class="preset-slot-btn text-left p-2 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition group"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-zinc-800 text-[11px] group-hover:text-zinc-900">2:00 - 3:00 PM</span>
+                    <span class="text-[9px] px-1 rounded bg-zinc-100 text-zinc-500">Afternoon</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  data-slot="4:00 PM - 5:00 PM"
+                  onclick="selectPresetSlot('4:00 PM - 5:00 PM', this)"
+                  class="preset-slot-btn text-left p-2 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition group"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-zinc-800 text-[11px] group-hover:text-zinc-900">4:00 - 5:00 PM</span>
+                    <span class="text-[9px] px-1 rounded bg-zinc-100 text-zinc-500">Early Eve</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  data-slot="6:00 PM - 7:00 PM"
+                  onclick="selectPresetSlot('6:00 PM - 7:00 PM', this)"
+                  class="preset-slot-btn is-active text-left p-2 rounded-lg border border-zinc-900 bg-zinc-900 text-white transition group shadow-xs"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-[11px] text-white">6:00 - 7:00 PM</span>
+                    <span class="text-[9px] px-1 rounded bg-zinc-800 text-zinc-300">Popular</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  data-slot="7:30 PM - 8:30 PM"
+                  onclick="selectPresetSlot('7:30 PM - 8:30 PM', this)"
+                  class="preset-slot-btn text-left p-2 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition group"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-zinc-800 text-[11px] group-hover:text-zinc-900">7:30 - 8:30 PM</span>
+                    <span class="text-[9px] px-1 rounded bg-zinc-100 text-zinc-500">Evening</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  data-slot="9:00 PM - 10:00 PM"
+                  onclick="selectPresetSlot('9:00 PM - 10:00 PM', this)"
+                  class="preset-slot-btn text-left p-2 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition group"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-zinc-800 text-[11px] group-hover:text-zinc-900">9:00 - 10:00 PM</span>
+                    <span class="text-[9px] px-1 rounded bg-zinc-100 text-zinc-500">Night</span>
+                  </div>
+                </button>
+              </div>
+
+              <!-- VIEW 3: Custom Interactive Time Configurator -->
+              <div id="timeCustomContainer" class="hidden space-y-3 pt-1">
+                <div class="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label class="block text-[11px] font-medium text-zinc-600 mb-1">Start Time</label>
+                    <input
+                      type="time"
+                      id="customStartTime"
+                      value="18:00"
+                      onchange="handleCustomTimeChange()"
+                      class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <label class="block text-[11px] font-medium text-zinc-600">End Time</label>
+                      <button
+                        type="button"
+                        onclick="setWheelToNow()"
+                        class="text-[10px] text-zinc-500 hover:text-zinc-900 underline"
+                      >
+                        Set to now
+                      </button>
+                    </div>
+                    <input
+                      type="time"
+                      id="customEndTime"
+                      value="19:00"
+                      onchange="handleCustomEndTimeChange()"
+                      class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Selected Window Badge -->
+              <div class="mt-2.5 p-2 bg-white border border-zinc-200/90 rounded-md flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <span class="text-zinc-500 text-[11px]">Selected:</span>
+                  <span id="timeSlotPreview" class="font-semibold text-zinc-900 text-[11px]">6:00 PM - 7:00 PM</span>
+                </div>
+                <span id="timeSlotDurationBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 font-medium border border-zinc-200/60">
+                  60 min cycle
+                </span>
+              </div>
+
+              <!-- Hidden field submitted with the form -->
+              <input type="hidden" id="poolTimeSlot" value="6:00 PM - 7:00 PM" />
+            </div>
+          </div>
+
+          <!-- Max Participants (2 to 4 people) -->
+          <div>
+            <label class="block font-medium text-zinc-700 mb-1">Max Participants (Cycle Capacity) <span class="text-red-500">*</span></label>
+            <select
+              id="poolCapacity"
+              required
+              class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+            >
+              <option value="2">2 People (Half load each)</option>
+              <option value="3" selected>3 People (Recommended for standard loads)</option>
+              <option value="4">4 People (Light laundry / shirts & shorts)</option>
+            </select>
+            <p class="text-[11px] text-zinc-400 mt-1">A pool allows 2 to 4 people to share one wash cycle.</p>
+          </div>
+
+          <!-- Optional Notes / Wash instructions -->
+          <div>
+            <label class="block font-medium text-zinc-700 mb-1">Cycle Type / Wash Notes (Optional)</label>
+            <input
+              type="text"
+              id="poolNotes"
+              placeholder="e.g. Whites & light colors only • Detergent provided"
+              class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+            />
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onclick="closeHostModal()"
+              class="px-3.5 py-2 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium shadow-sm transition active:scale-[0.98]"
+            >
+              Create Pool
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 2: "Join a Pool" Modal -->
+    <!-- ========================================================================= -->
+    <div id="joinModal" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="modal-backdrop fixed inset-0 bg-zinc-900/40 backdrop-blur-sm" onclick="closeJoinModal()"></div>
+
+      <div class="modal-panel relative bg-white border border-zinc-200 rounded-xl shadow-xl w-full max-w-md overflow-hidden z-10">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+          <div>
+            <h3 class="text-sm font-semibold text-zinc-900">Join Wash Pool</h3>
+            <p class="text-xs text-zinc-500 mt-0.5" id="joinModalSubtitle">Confirm your slot in this wash cycle.</p>
+          </div>
+          <button onclick="closeJoinModal()" class="text-zinc-400 hover:text-zinc-700 p-1 rounded-md transition-colors">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Pool Summary Card -->
+        <div class="p-6 space-y-4 text-xs">
+          <div id="joinPoolSummary" class="bg-zinc-50 border border-zinc-200 rounded-lg p-3.5 space-y-2">
+            <!-- Dynamic pool info injected here -->
+          </div>
+
+          <form id="joinForm" onsubmit="handleConfirmJoin(event)" class="space-y-3.5">
+            <input type="hidden" id="joinTargetPoolId" value="" />
+
+            <div>
+              <label class="block font-medium text-zinc-700 mb-1">Your Full Name <span class="text-red-500">*</span></label>
+              <input
+                type="text"
+                id="joinName"
+                required
+                placeholder="Enter your full name"
+                class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-medium text-zinc-700 mb-1">Your Block <span class="text-red-500">*</span></label>
+                <select
+                  id="joinBlock"
+                  required
+                  class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+                >
+                  <option value="Block A">Block A</option>
+                  <option value="Block B">Block B</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-medium text-zinc-700 mb-1">Room Number <span class="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  id="joinRoom"
+                  required
+                  placeholder="e.g. 108"
+                  class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onclick="closeJoinModal()"
+                class="px-3.5 py-2 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                id="confirmJoinBtn"
+                class="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium shadow-sm transition active:scale-[0.98]"
+              >
+                Confirm & Join
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 3: In-Pool Chat Section -->
+    <!-- ========================================================================= -->
+    <div id="chatModal" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+      <div class="modal-backdrop fixed inset-0 bg-zinc-900/40 backdrop-blur-sm" onclick="closeChatModal()"></div>
+
+      <div class="modal-panel relative bg-white border border-zinc-200 rounded-xl shadow-2xl w-full max-w-xl h-[88vh] max-h-[640px] flex flex-col overflow-hidden z-10">
+        <!-- Chat Header -->
+        <div class="px-4 sm:px-5 py-3.5 border-b border-zinc-200/80 bg-zinc-50/70 flex items-center justify-between flex-shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-700">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-semibold text-zinc-900" id="chatMachineTitle">Pool Discussion</h3>
+                <span id="chatTimeSlotBadge" class="text-[11px] font-medium px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
+                  Time Slot
+                </span>
+              </div>
+              <p class="text-[11px] text-zinc-500">Coordinate detergents, drop-off timings & clothes sorting</p>
+            </div>
+          </div>
+          <button onclick="closeChatModal()" class="text-zinc-400 hover:text-zinc-700 p-1.5 rounded-md transition-colors">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Confirmed Members Bar (Notion-style chip list) -->
+        <div class="px-4 sm:px-5 py-2.5 bg-white border-b border-zinc-100 flex-shrink-0">
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Confirmed Members (<span id="chatMemberCount">0</span>)
+            </span>
+            <span id="chatSlotAvailability" class="text-[11px] text-zinc-400 font-medium"></span>
+          </div>
+          <div id="chatMembersList" class="flex flex-wrap items-center gap-1.5">
+            <!-- Rendered by renderChatMembers() -->
+          </div>
+        </div>
+
+        <!-- Messages Container -->
+        <div id="chatMessagesBox" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-zinc-50/40">
+          <!-- Rendered dynamically by renderChatMessages() -->
+        </div>
+
+        <!-- Quick Chat Suggestions -->
+        <div class="px-4 py-1.5 bg-white border-t border-zinc-100 flex items-center gap-1.5 overflow-x-auto text-[11px] text-zinc-600 no-scrollbar flex-shrink-0">
+          <span class="text-zinc-400 whitespace-nowrap text-[10px] uppercase font-semibold">Quick:</span>
+          <button onclick="insertQuickMessage('🫧 I have liquid detergent & pods to share!')" class="whitespace-nowrap px-2 py-0.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition">
+            🫧 Have detergent
+          </button>
+          <button onclick="insertQuickMessage('⏰ I will drop my clothes 5 mins before start')" class="whitespace-nowrap px-2 py-0.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition">
+            ⏰ Dropping 5m early
+          </button>
+          <button onclick="insertQuickMessage('🧺 Can I add 2 towels to the cycle?')" class="whitespace-nowrap px-2 py-0.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition">
+            🧺 Towels question
+          </button>
+          <button onclick="insertQuickMessage('✅ Cycle finished! Ready for pickup.')" class="whitespace-nowrap px-2 py-0.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition">
+            ✅ Ready for pickup
+          </button>
+        </div>
+
+        <!-- Message Input Bar -->
+        <div class="p-3 sm:p-4 bg-white border-t border-zinc-200/80 flex-shrink-0">
+          <!-- Sender Identity Selector / Switcher -->
+          <div class="flex items-center justify-between gap-2 mb-2 text-xs">
+            <div class="flex items-center gap-1.5 text-zinc-500 text-[11px]">
+              <span>Posting as:</span>
+              <span id="chatPostingAsBadge" class="font-semibold text-zinc-800 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200/60">
+                Resident
+              </span>
+            </div>
+            <button
+              onclick="promptSwitchIdentity()"
+              class="text-[11px] text-zinc-500 hover:text-zinc-900 underline underline-offset-2 transition"
+            >
+              Change Name/Room
+            </button>
+          </div>
+
+          <form id="chatForm" onsubmit="handleSendChatMessage(event)" class="flex items-center gap-2">
+            <input
+              type="text"
+              id="chatMessageInput"
+              required
+              autocomplete="off"
+              placeholder="Type a message (detergent, timings, load size)..."
+              class="flex-1 bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:bg-white placeholder:text-zinc-400 transition"
+            />
+            <button
+              type="submit"
+              class="bg-zinc-900 hover:bg-zinc-800 text-white px-3.5 py-2.5 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition active:scale-[0.98]"
+            >
+              <span>Send</span>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 4: User Profile Quick Modal -->
+    <!-- ========================================================================= -->
+    <div id="profileModal" class="modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="modal-backdrop fixed inset-0 bg-zinc-900/40 backdrop-blur-sm" onclick="closeUserProfileModal()"></div>
+
+      <div class="modal-panel relative bg-white border border-zinc-200 rounded-xl shadow-xl w-full max-w-sm overflow-hidden z-10 p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-zinc-100 pb-3">
+          <div>
+            <h3 class="text-sm font-semibold text-zinc-900">Your Resident Profile</h3>
+            <p class="text-xs text-zinc-500">Auto-fills when hosting, joining & chatting.</p>
+          </div>
+          <button onclick="closeUserProfileModal()" class="text-zinc-400 hover:text-zinc-700 p-1 rounded">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="profileForm" onsubmit="handleSaveProfile(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block font-medium text-zinc-700 mb-1">Full Name</label>
+            <input type="text" id="profName" required placeholder="Enter your full name" class="w-full border border-zinc-200 rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none" />
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block font-medium text-zinc-700 mb-1">Block</label>
+              <select id="profBlock" class="w-full border border-zinc-200 rounded-md px-2.5 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none">
+                <option value="Block A">Block A</option>
+                <option value="Block B">Block B</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium text-zinc-700 mb-1">Room Number</label>
+              <input type="text" id="profRoom" required placeholder="e.g. 312" class="w-full border border-zinc-200 rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-zinc-500 focus:outline-none" />
+            </div>
+          </div>
+          <div class="pt-2 flex justify-end gap-2">
+            <button type="button" onclick="closeUserProfileModal()" class="px-3 py-1.5 border border-zinc-200 rounded-md text-zinc-600 hover:bg-zinc-50">Cancel</button>
+            <button type="submit" class="px-3.5 py-1.5 bg-zinc-900 text-white rounded-md font-medium hover:bg-zinc-800">Save Profile</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-12 opacity-0 pointer-events-none transition-all duration-200 bg-zinc-900 text-white text-xs px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2">
+      <svg class="w-4 h-4 text-emerald-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span id="toastMessage">Success</span>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- APPLICATION LOGIC & STATE ENGINE (Vanilla JS with LocalStorage) -->
+    <!-- ========================================================================= -->
+    <script>
+      // Storage Keys (Clean production keys)
+      const STORAGE_KEY_POOLS = 'hostel_laundry_pools';
+      const STORAGE_KEY_USER = 'hostel_laundry_user';
+
+      // Machine Configuration
+      const MACHINES = [
+        { id: 'Machine A1', block: 'Block A', floor: '1st Floor Laundry Room' },
+        { id: 'Machine B1', block: 'Block B', floor: '1st Floor Laundry Room' },
+        { id: 'Machine B2', block: 'Block B', floor: '2nd Floor Laundry Room' },
+      ];
+
+      // Application State
+      let poolsState = [];
+      let activeFilter = 'all'; // 'all', 'Block A', 'Block B', 'open'
+      let activeSearchQuery = '';
+      let activeChatPoolId = null;
+      let currentUser = {
+        name: '',
+        block: 'Block A',
+        room: '',
+      };
+
+      // Initialization
+      function initApp() {
+        // Purge legacy demo keys if they exist in localStorage
+        try {
+          localStorage.removeItem('hostel_laundry_pools_v2');
+          localStorage.removeItem('hostel_laundry_current_user');
+        } catch (e) {}
+
+        // Load User Profile
+        try {
+          const storedUser = localStorage.getItem(STORAGE_KEY_USER);
+          if (storedUser) {
+            currentUser = JSON.parse(storedUser);
+          }
+        } catch (e) {
+          console.error('Error reading current user:', e);
+        }
+
+        // Load Pools
+        try {
+          const storedPools = localStorage.getItem(STORAGE_KEY_POOLS);
+          if (storedPools) {
+            poolsState = JSON.parse(storedPools);
+          } else {
+            poolsState = [];
+          }
+        } catch (e) {
+          console.error('Error loading pools:', e);
+          poolsState = [];
+        }
+
+        // Set default date picker to today
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('poolDate');
+        if (dateInput) dateInput.value = todayStr;
+
+        updateNavUserDisplay();
+        renderMachineStatus();
+        renderPoolsFeed();
+
+        // Keyboard navigation (Escape closes modals)
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            closeHostModal();
+            closeJoinModal();
+            closeChatModal();
+            closeUserProfileModal();
+          }
+        });
+      }
+
+      function savePoolsState() {
+        try {
+          localStorage.setItem(STORAGE_KEY_POOLS, JSON.stringify(poolsState));
+        } catch (e) {
+          console.error('Failed to save to localStorage:', e);
+        }
+      }
+
+      function saveCurrentUser() {
+        try {
+          localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
+          updateNavUserDisplay();
+        } catch (e) {
+          console.error('Failed to save user profile:', e);
+        }
+      }
+
+      function updateNavUserDisplay() {
+        const display = document.getElementById('navUserDisplay');
+        if (display) {
+          if (currentUser.name && currentUser.room) {
+            display.textContent = `${currentUser.name} (${currentUser.block === 'Block A' ? 'A' : 'B'}-${currentUser.room})`;
+          } else {
+            display.textContent = 'Set Room Profile';
+          }
+        }
+      }
+
+      // Clear All Pools Helper
+      function clearAllPools() {
+        if (!poolsState || poolsState.length === 0) {
+          showToast('No active wash pools to clear');
+          return;
+        }
+        if (confirm('Are you sure you want to clear all active wash pools?')) {
+          poolsState = [];
+          savePoolsState();
+          renderMachineStatus();
+          renderPoolsFeed();
+          showToast('All wash pools cleared');
+        }
+      }
+
+      // -------------------------------------------------------------------------
+      // Render Machine Status Bar
+      // -------------------------------------------------------------------------
+      function renderMachineStatus() {
+        const bar = document.getElementById('machineStatusBar');
+        if (!bar) return;
+
+        bar.innerHTML = MACHINES.map((m) => {
+          // Find pools active for this machine
+          const machinePools = poolsState.filter((p) => p.machine === m.id);
+          const hasOpenPool = machinePools.some((p) => p.members.length < p.maxParticipants);
+          const activeCount = machinePools.length;
+
+          let statusTag = '';
+          if (activeCount === 0) {
+            statusTag = `
+              <span class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Free to Host
+              </span>
+            `;
+          } else if (hasOpenPool) {
+            statusTag = `
+              <span class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/80">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                Active Pool (Open)
+              </span>
+            `;
+          } else {
+            statusTag = `
+              <span class="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+                Pools Full (${activeCount})
+              </span>
+            `;
+          }
+
+          return `
+            <div class="flex items-center justify-between p-2.5 rounded-lg border border-zinc-200/80 bg-zinc-50/60 hover:bg-zinc-50 transition">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-md ${m.block === 'Block A' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' : 'bg-teal-50 text-teal-700 border border-teal-200/60'} flex items-center justify-center font-semibold text-[11px]">
+                  ${m.id.split(' ')[1]}
+                </div>
+                <div>
+                  <div class="font-medium text-xs text-zinc-800">${m.id}</div>
+                  <div class="text-[10px] text-zinc-500">${m.block} • ${m.floor.split(' ')[0]} Flr</div>
+                </div>
+              </div>
+              <div>${statusTag}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // -------------------------------------------------------------------------
+      // Render Active Wash Pools Feed
+      // -------------------------------------------------------------------------
+      function renderPoolsFeed() {
+        const feed = document.getElementById('poolsFeed');
+        const emptyState = document.getElementById('emptyState');
+        const countAll = document.getElementById('count-all');
+        if (!feed) return;
+
+        if (countAll) countAll.textContent = poolsState.length;
+
+        // Apply Filter
+        let filtered = poolsState.filter((pool) => {
+          if (activeFilter === 'Block A') return pool.block === 'Block A';
+          if (activeFilter === 'Block B') return pool.block === 'Block B';
+          if (activeFilter === 'open') return pool.members.length < pool.maxParticipants;
+          return true;
+        });
+
+        // Apply Search
+        if (activeSearchQuery.trim() !== '') {
+          const q = activeSearchQuery.toLowerCase();
+          filtered = filtered.filter((pool) => {
+            const matchMachine = pool.machine.toLowerCase().includes(q);
+            const matchBlock = pool.block.toLowerCase().includes(q);
+            const matchHost = pool.host.name.toLowerCase().includes(q) || pool.host.room.toLowerCase().includes(q);
+            const matchNotes = (pool.notes || '').toLowerCase().includes(q);
+            const matchMembers = pool.members.some(
+              (m) => m.name.toLowerCase().includes(q) || m.room.toLowerCase().includes(q)
+            );
+            return matchMachine || matchBlock || matchHost || matchNotes || matchMembers;
+          });
+        }
+
+        if (filtered.length === 0) {
+          feed.innerHTML = '';
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+
+        feed.innerHTML = filtered.map((pool) => {
+          const isFull = pool.members.length >= pool.maxParticipants;
+          const slotsLeft = pool.maxParticipants - pool.members.length;
+          const isBlockA = pool.block === 'Block A';
+
+          // Check if current user is already a member
+          const isUserInPool = pool.members.some(
+            (m) =>
+              currentUser.name &&
+              m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase() &&
+              m.room.trim() === currentUser.room.trim()
+          );
+
+          // Render member avatar badges
+          const memberChips = pool.members.map((m) => {
+            const initials = m.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+            return `
+              <div class="inline-flex items-center gap-1.5 bg-zinc-50 border border-zinc-200/80 px-2 py-1 rounded-md text-[11px] text-zinc-700" title="${m.name} (${m.block}, Room ${m.room})">
+                <span class="w-4 h-4 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center text-[9px] font-semibold">
+                  ${initials}
+                </span>
+                <span class="truncate max-w-[90px] font-medium">${m.name}</span>
+                <span class="text-zinc-400 text-[10px]">${m.block === 'Block A' ? 'A' : 'B'}-${m.room}</span>
+                ${m.isHost ? '<span class="text-[9px] text-amber-600 font-semibold uppercase tracking-wider ml-0.5">Host</span>' : ''}
+              </div>
+            `;
+          }).join('');
+
+          // Render empty slot placeholders
+          let emptySlotChips = '';
+          for (let i = 0; i < slotsLeft; i++) {
+            emptySlotChips += `
+              <div class="inline-flex items-center gap-1 border border-dashed border-zinc-200 px-2 py-1 rounded-md text-[11px] text-zinc-400">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span>Open slot</span>
+              </div>
+            `;
+          }
+
+          // Slot badge
+          let slotBadge = '';
+          if (isFull) {
+            slotBadge = `
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200">
+                Full (${pool.maxParticipants}/${pool.maxParticipants})
+              </span>
+            `;
+          } else {
+            slotBadge = `
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ${pool.members.length}/${pool.maxParticipants} Filled • ${slotsLeft} open
+              </span>
+            `;
+          }
+
+          return `
+            <article class="bg-white border border-zinc-200 rounded-xl p-4 sm:p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-zinc-300 transition-all flex flex-col justify-between">
+              <div>
+                <!-- Card Header: Machine & Block & Slot status -->
+                <div class="flex items-start justify-between gap-2 mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-sm text-zinc-900">${pool.machine}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${isBlockA ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80' : 'bg-teal-50 text-teal-700 border border-teal-200/80'}">
+                      ${pool.block}
+                    </span>
+                  </div>
+                  <div>${slotBadge}</div>
+                </div>
+
+                <!-- Date & Time Slot -->
+                <div class="bg-zinc-50/80 border border-zinc-100 rounded-lg p-2.5 mb-3 flex items-center justify-between text-xs text-zinc-700">
+                  <div class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span class="font-medium">${formatDisplayDate(pool.date)}</span>
+                  </div>
+                  <div class="flex items-center gap-1 text-zinc-600">
+                    <svg class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span class="font-medium">${pool.timeSlot}</span>
+                  </div>
+                </div>
+
+                <!-- Host Details -->
+                <div class="text-xs text-zinc-600 mb-3 flex items-center justify-between">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-zinc-400">Host:</span>
+                    <span class="font-medium text-zinc-900">${pool.host.name}</span>
+                    <span class="text-zinc-400">•</span>
+                    <span class="text-zinc-500">${pool.host.block}, Rm ${pool.host.room}</span>
+                  </div>
+                  ${isUserInPool ? '<span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">You Joined</span>' : ''}
+                </div>
+
+                <!-- Notes (if any) -->
+                ${
+                  pool.notes
+                    ? `<p class="text-[11px] text-zinc-500 italic bg-white border-l-2 border-zinc-300 pl-2.5 py-0.5 mb-3.5 line-clamp-2">"${pool.notes}"</p>`
+                    : ''
+                }
+
+                <!-- Members List -->
+                <div class="space-y-1.5 mb-4">
+                  <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Participants (${pool.members.length}/${pool.maxParticipants})
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    ${memberChips}
+                    ${emptySlotChips}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="pt-3 border-t border-zinc-100 flex items-center gap-2">
+                <!-- Open Chat Button -->
+                <button
+                  onclick="openChatModal('${pool.id}')"
+                  class="flex-1 inline-flex items-center justify-center gap-1.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 text-xs font-medium py-2 px-3 rounded-lg border border-zinc-200 transition"
+                >
+                  <svg class="w-3.5 h-3.5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>Open Chat</span>
+                  <span class="text-[10px] text-zinc-400 font-semibold bg-white border border-zinc-200 px-1.5 py-0.2 rounded-full">
+                    ${pool.messages ? pool.messages.length : 0}
+                  </span>
+                </button>
+
+                <!-- Join Pool Button -->
+                ${
+                  isFull
+                    ? `
+                    <button
+                      disabled
+                      class="flex-1 cursor-not-allowed bg-zinc-100 text-zinc-400 text-xs font-medium py-2 px-3 rounded-lg border border-zinc-200 text-center"
+                    >
+                      Pool Full
+                    </button>
+                  `
+                    : `
+                    <button
+                      onclick="openJoinModal('${pool.id}')"
+                      class="flex-1 inline-flex items-center justify-center gap-1 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium py-2 px-3 rounded-lg shadow-sm transition active:scale-[0.98]"
+                    >
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      <span>Join Pool</span>
+                    </button>
+                  `
+                }
+              </div>
+            </article>
+          `;
+        }).join('');
+      }
+
+      function formatDisplayDate(dateStr) {
+        if (!dateStr) return 'Today';
+        try {
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            const today = new Date();
+            if (
+              d.getFullYear() === today.getFullYear() &&
+              d.getMonth() === today.getMonth() &&
+              d.getDate() === today.getDate()
+            ) {
+              return 'Today';
+            }
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+        } catch (e) {
+          // fallback
+        }
+        return dateStr;
+      }
+
+      // -------------------------------------------------------------------------
+      // Filter & Search Handlers
+      // -------------------------------------------------------------------------
+      function setFilter(filterType) {
+        activeFilter = filterType;
+
+        // Update active tab styles
+        const tabs = ['all', 'Block A', 'Block B', 'open'];
+        tabs.forEach((tab) => {
+          const btn = document.getElementById(`tab-${tab}`);
+          if (btn) {
+            if (tab === filterType) {
+              btn.className = 'px-3 py-1.5 rounded-md transition-colors bg-white text-zinc-900 shadow-sm';
+            } else {
+              btn.className = 'px-3 py-1.5 rounded-md transition-colors hover:text-zinc-900 text-zinc-600';
+            }
+          }
+        });
+
+        renderPoolsFeed();
+      }
+
+      function handleSearch(query) {
+        activeSearchQuery = query;
+        renderPoolsFeed();
+      }
+
+      // -------------------------------------------------------------------------
+      // MODAL 1: "Host a Wash" Handlers & Interactive Time Wheel Engine
+      // -------------------------------------------------------------------------
+      let currentTimeMode = 'wheel'; // 'wheel' | 'presets' | 'custom'
+      let activeCycleDuration = 60; // in minutes
+
+      // Wheel state
+      let wheelHour = 6;
+      let wheelMinuteIndex = 0; // index in WHEEL_MINUTES
+      const WHEEL_MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+      let wheelAmpm = 'PM';
+      let isWheelInitialized = false;
+      let isWheelScrollingProgrammatically = false;
+
+      function buildWheelDrums() {
+        if (isWheelInitialized) return;
+
+        const drumHour = document.getElementById('drumHour');
+        const drumMinute = document.getElementById('drumMinute');
+        const drumAmpm = document.getElementById('drumAmpm');
+
+        if (!drumHour || !drumMinute || !drumAmpm) return;
+
+        // Populate Hours 1..12
+        drumHour.innerHTML = '';
+        for (let h = 1; h <= 12; h++) {
+          const item = document.createElement('div');
+          item.className = 'wheel-drum-item wheel-item-inactive text-sm';
+          item.dataset.hour = String(h);
+          item.textContent = String(h);
+          item.onclick = () => selectWheelItem('hour', h);
+          drumHour.appendChild(item);
+        }
+
+        // Populate Minutes
+        drumMinute.innerHTML = '';
+        WHEEL_MINUTES.forEach((mStr, idx) => {
+          const item = document.createElement('div');
+          item.className = 'wheel-drum-item wheel-item-inactive text-sm';
+          item.dataset.minIdx = String(idx);
+          item.textContent = mStr;
+          item.onclick = () => selectWheelItem('minute', idx);
+          drumMinute.appendChild(item);
+        });
+
+        // Populate AM / PM
+        drumAmpm.innerHTML = '';
+        ['AM', 'PM'].forEach((p) => {
+          const item = document.createElement('div');
+          item.className = 'wheel-drum-item wheel-item-inactive text-sm';
+          item.dataset.period = p;
+          item.textContent = p;
+          item.onclick = () => selectWheelItem('ampm', p);
+          drumAmpm.appendChild(item);
+        });
+
+        // Attach mousewheel handlers
+        const attachWheelScroll = (el, type) => {
+          el.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 1 : -1;
+            stepWheel(type, delta);
+          }, { passive: false });
+
+          // Debounced scroll listener for touch / trackpad swipes
+          let scrollTimeout;
+          el.addEventListener('scroll', () => {
+            if (isWheelScrollingProgrammatically) return;
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+              handleDrumScrollEnd(el, type);
+            }, 120);
+          });
+        };
+
+        attachWheelScroll(drumHour, 'hour');
+        attachWheelScroll(drumMinute, 'minute');
+        attachWheelScroll(drumAmpm, 'ampm');
+
+        isWheelInitialized = true;
+      }
+
+      function handleDrumScrollEnd(el, type) {
+        const itemHeight = 36;
+        const targetIndex = Math.round(el.scrollTop / itemHeight);
+        
+        if (type === 'hour') {
+          const clamped = Math.max(0, Math.min(11, targetIndex));
+          wheelHour = clamped + 1;
+        } else if (type === 'minute') {
+          const clamped = Math.max(0, Math.min(WHEEL_MINUTES.length - 1, targetIndex));
+          wheelMinuteIndex = clamped;
+        } else if (type === 'ampm') {
+          const clamped = Math.max(0, Math.min(1, targetIndex));
+          wheelAmpm = clamped === 0 ? 'AM' : 'PM';
+        }
+
+        syncWheelVisuals(true);
+      }
+
+      function selectWheelItem(type, val) {
+        if (type === 'hour') {
+          wheelHour = Number(val);
+        } else if (type === 'minute') {
+          wheelMinuteIndex = Number(val);
+        } else if (type === 'ampm') {
+          wheelAmpm = String(val);
+        }
+        syncWheelVisuals(true);
+      }
+
+      function stepWheel(type, delta) {
+        if (type === 'hour') {
+          wheelHour = ((wheelHour - 1 + delta + 12) % 12) + 1;
+        } else if (type === 'minute') {
+          wheelMinuteIndex = (wheelMinuteIndex + delta + WHEEL_MINUTES.length) % WHEEL_MINUTES.length;
+        } else if (type === 'ampm') {
+          wheelAmpm = wheelAmpm === 'AM' ? 'PM' : 'AM';
+        }
+        syncWheelVisuals(true);
+      }
+
+      function stepWheelHourOffset(offsetHours) {
+        let h24 = getWheel24Hour();
+        h24 = (h24 + offsetHours + 24) % 24;
+        setWheelFrom24H(h24, wheelMinuteIndex);
+      }
+
+      function setWheelExact(hour12, minuteIdx, ampm) {
+        wheelHour = hour12;
+        wheelMinuteIndex = Math.max(0, Math.min(WHEEL_MINUTES.length - 1, minuteIdx));
+        wheelAmpm = ampm;
+        syncWheelVisuals(true);
+      }
+
+      function setWheelToNow() {
+        const now = new Date();
+        let h = now.getHours();
+        const m = now.getMinutes();
+        
+        // Round to nearest 5 mins
+        let roundedM = Math.round(m / 5) * 5;
+        if (roundedM >= 60) {
+          h = (h + 1) % 24;
+          roundedM = 0;
+        }
+
+        const mStr = roundedM < 10 ? '0' + roundedM : String(roundedM);
+        let minIdx = WHEEL_MINUTES.indexOf(mStr);
+        if (minIdx === -1) minIdx = 0;
+
+        setWheelFrom24H(h, minIdx);
+      }
+
+      function setWheelFrom24H(h24, minIdx) {
+        wheelAmpm = h24 >= 12 ? 'PM' : 'AM';
+        let h12 = h24 % 12;
+        if (h12 === 0) h12 = 12;
+        wheelHour = h12;
+        wheelMinuteIndex = minIdx;
+        syncWheelVisuals(true);
+      }
+
+      function getWheel24Hour() {
+        let h = wheelHour % 12;
+        if (wheelAmpm === 'PM') h += 12;
+        return h;
+      }
+
+      function syncWheelVisuals(smooth = true) {
+        buildWheelDrums();
+
+        const drumHour = document.getElementById('drumHour');
+        const drumMinute = document.getElementById('drumMinute');
+        const drumAmpm = document.getElementById('drumAmpm');
+
+        if (!drumHour || !drumMinute || !drumAmpm) return;
+
+        isWheelScrollingProgrammatically = true;
+
+        const itemHeight = 36;
+        const hourTop = (wheelHour - 1) * itemHeight;
+        const minTop = wheelMinuteIndex * itemHeight;
+        const ampmTop = (wheelAmpm === 'PM' ? 1 : 0) * itemHeight;
+
+        drumHour.scrollTo({ top: hourTop, behavior: smooth ? 'smooth' : 'instant' });
+        drumMinute.scrollTo({ top: minTop, behavior: smooth ? 'smooth' : 'instant' });
+        drumAmpm.scrollTo({ top: ampmTop, behavior: smooth ? 'smooth' : 'instant' });
+
+        setTimeout(() => {
+          isWheelScrollingProgrammatically = false;
+        }, smooth ? 220 : 50);
+
+        // Highlight active items
+        drumHour.querySelectorAll('.wheel-drum-item').forEach((item) => {
+          const isCurrent = Number(item.dataset.hour) === wheelHour;
+          item.className = `wheel-drum-item text-sm ${isCurrent ? 'wheel-item-active' : 'wheel-item-inactive'}`;
+        });
+
+        drumMinute.querySelectorAll('.wheel-drum-item').forEach((item) => {
+          const isCurrent = Number(item.dataset.minIdx) === wheelMinuteIndex;
+          item.className = `wheel-drum-item text-sm ${isCurrent ? 'wheel-item-active' : 'wheel-item-inactive'}`;
+        });
+
+        drumAmpm.querySelectorAll('.wheel-drum-item').forEach((item) => {
+          const isCurrent = item.dataset.period === wheelAmpm;
+          item.className = `wheel-drum-item text-sm ${isCurrent ? 'wheel-item-active' : 'wheel-item-inactive'}`;
+        });
+
+        // Compute current start & end times
+        const mStr = WHEEL_MINUTES[wheelMinuteIndex];
+        const h24 = getWheel24Hour();
+        const start24 = `${h24 < 10 ? '0' + h24 : h24}:${mStr}`;
+        const end24 = addMinutesToTime24(start24, activeCycleDuration);
+
+        const start12 = `${wheelHour}:${mStr} ${wheelAmpm}`;
+        const end12 = formatTime12h(end24);
+        const slotString = `${start12} - ${end12}`;
+
+        // Sync inputs
+        const startInput = document.getElementById('customStartTime');
+        const endInput = document.getElementById('customEndTime');
+        if (startInput) startInput.value = start24;
+        if (endInput) endInput.value = end24;
+
+        updateTimeSlotPreview(slotString, `${activeCycleDuration} min cycle`);
+      }
+
+      function initScheduleControls() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('poolDate');
+        if (dateInput && !dateInput.value) {
+          dateInput.value = todayStr;
+        }
+        updateDatePillsHighlight(dateInput ? dateInput.value : todayStr);
+
+        // Ensure wheel drum markup is ready
+        buildWheelDrums();
+
+        // Default wheel time: 6:00 PM or next nearest 15-min mark
+        const now = new Date();
+        let h = now.getHours();
+        let m = now.getMinutes();
+        let roundedM = Math.ceil(m / 5) * 5;
+        if (roundedM >= 60) {
+          h = (h + 1) % 24;
+          roundedM = 0;
+        }
+        // If it's early in the day, default to 6:00 PM for typical laundry rush
+        if (h < 17) {
+          setWheelExact(6, 0, 'PM');
+        } else {
+          const mStr = roundedM < 10 ? '0' + roundedM : String(roundedM);
+          let minIdx = WHEEL_MINUTES.indexOf(mStr);
+          if (minIdx === -1) minIdx = 0;
+          setWheelFrom24H(h, minIdx);
+        }
+
+        // Apply default or current time mode
+        setTimeMode(currentTimeMode);
+      }
+
+      function setScheduleDate(type) {
+        const dateInput = document.getElementById('poolDate');
+        if (!dateInput) return;
+
+        const d = new Date();
+        if (type === 'tomorrow') {
+          d.setDate(d.getDate() + 1);
+        }
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+        updateDatePillsHighlight(dateInput.value);
+      }
+
+      function handleDateInputChange(val) {
+        updateDatePillsHighlight(val);
+      }
+
+      function updateDatePillsHighlight(selectedDateStr) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+        const btnToday = document.getElementById('dateBtn-today');
+        const btnTomorrow = document.getElementById('dateBtn-tomorrow');
+
+        if (btnToday && btnTomorrow) {
+          if (selectedDateStr === todayStr) {
+            btnToday.className = 'px-2.5 py-1 rounded-md border border-zinc-900 bg-zinc-900 text-white font-medium transition text-xs shadow-xs';
+            btnTomorrow.className = 'px-2.5 py-1 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 transition text-xs';
+          } else if (selectedDateStr === tomorrowStr) {
+            btnToday.className = 'px-2.5 py-1 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 transition text-xs';
+            btnTomorrow.className = 'px-2.5 py-1 rounded-md border border-zinc-900 bg-zinc-900 text-white font-medium transition text-xs shadow-xs';
+          } else {
+            btnToday.className = 'px-2.5 py-1 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 transition text-xs';
+            btnTomorrow.className = 'px-2.5 py-1 rounded-md border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 transition text-xs';
+          }
+        }
+      }
+
+      function setTimeMode(mode) {
+        currentTimeMode = mode;
+        const wheelBtn = document.getElementById('timeModeWheelBtn');
+        const presetsBtn = document.getElementById('timeModePresetsBtn');
+        const customBtn = document.getElementById('timeModeCustomBtn');
+
+        const wheelContainer = document.getElementById('timeWheelContainer');
+        const presetsContainer = document.getElementById('timePresetsContainer');
+        const customContainer = document.getElementById('timeCustomContainer');
+
+        if (!wheelBtn || !presetsBtn || !customBtn || !wheelContainer || !presetsContainer || !customContainer) return;
+
+        // Reset tab button states
+        [wheelBtn, presetsBtn, customBtn].forEach((btn) => {
+          btn.className = 'px-2.5 py-1 rounded-md transition font-medium text-zinc-600 hover:text-zinc-900';
+        });
+        [wheelContainer, presetsContainer, customContainer].forEach((c) => {
+          c.classList.add('hidden');
+        });
+
+        if (mode === 'wheel') {
+          wheelBtn.className = 'px-2.5 py-1 rounded-md transition font-medium bg-white text-zinc-900 shadow-xs flex items-center gap-1';
+          wheelContainer.classList.remove('hidden');
+          // Allow DOM to finish layout before scrolling wheel
+          setTimeout(() => syncWheelVisuals(false), 50);
+        } else if (mode === 'presets') {
+          presetsBtn.className = 'px-2.5 py-1 rounded-md transition font-medium bg-white text-zinc-900 shadow-xs';
+          presetsContainer.classList.remove('hidden');
+
+          const activePresetBtn = document.querySelector('.preset-slot-btn.is-active') || document.querySelector('[data-slot="6:00 PM - 7:00 PM"]');
+          if (activePresetBtn) {
+            const slot = activePresetBtn.getAttribute('data-slot');
+            selectPresetSlot(slot, activePresetBtn);
+          }
+        } else {
+          customBtn.className = 'px-2.5 py-1 rounded-md transition font-medium bg-white text-zinc-900 shadow-xs';
+          customContainer.classList.remove('hidden');
+          handleCustomTimeChange();
+        }
+      }
+
+      function selectPresetSlot(slotString, btnEl) {
+        const allPresetBtns = document.querySelectorAll('.preset-slot-btn');
+        allPresetBtns.forEach((b) => {
+          b.classList.remove('is-active', 'border-zinc-900', 'bg-zinc-900', 'text-white', 'shadow-xs');
+          b.classList.add('border-zinc-200', 'bg-white', 'text-zinc-800');
+          const title = b.querySelector('span:first-child');
+          const badge = b.querySelector('span:last-child');
+          if (title) title.className = 'font-semibold text-zinc-800 text-[11px] group-hover:text-zinc-900';
+          if (badge) badge.className = 'text-[9px] px-1 rounded bg-zinc-100 text-zinc-500';
+        });
+
+        if (btnEl) {
+          btnEl.classList.add('is-active', 'border-zinc-900', 'bg-zinc-900', 'text-white', 'shadow-xs');
+          btnEl.classList.remove('border-zinc-200', 'bg-white', 'text-zinc-800');
+          const title = btnEl.querySelector('span:first-child');
+          const badge = btnEl.querySelector('span:last-child');
+          if (title) title.className = 'font-semibold text-[11px] text-white';
+          if (badge) badge.className = 'text-[9px] px-1 rounded bg-zinc-800 text-zinc-300';
+        }
+
+        updateTimeSlotPreview(slotString, '60 min cycle');
+      }
+
+      function applyDurationMinutes(mins, btnEl) {
+        activeCycleDuration = mins;
+        const allDurationBtns = document.querySelectorAll('.duration-btn');
+        allDurationBtns.forEach((b) => {
+          b.className = 'duration-btn py-1 px-1.5 text-center rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-[11px] text-zinc-700 transition';
+          const sub = b.querySelector('span');
+          if (sub) sub.className = 'text-[9px] text-zinc-400 block';
+        });
+
+        if (btnEl) {
+          btnEl.className = 'duration-btn py-1 px-1.5 text-center rounded border border-zinc-900 bg-zinc-900 text-white font-medium text-[11px] transition shadow-xs';
+          const sub = btnEl.querySelector('span');
+          if (sub) sub.className = 'text-[9px] text-zinc-300 block';
+        }
+
+        if (currentTimeMode === 'wheel') {
+          syncWheelVisuals(false);
+        } else {
+          handleCustomTimeChange();
+        }
+      }
+
+      function formatTime12h(time24) {
+        if (!time24) return '';
+        const parts = time24.split(':');
+        let h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (isNaN(h) || isNaN(m)) return time24;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        if (h === 0) h = 12;
+        const mFormatted = m < 10 ? '0' + m : m;
+        return `${h}:${mFormatted} ${ampm}`;
+      }
+
+      function addMinutesToTime24(time24, minsToAdd) {
+        if (!time24) return '19:00';
+        const parts = time24.split(':');
+        let totalMins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) + minsToAdd;
+        totalMins = (totalMins % (24 * 60) + (24 * 60)) % (24 * 60);
+        const newH = Math.floor(totalMins / 60);
+        const newM = totalMins % 60;
+        return `${newH < 10 ? '0' + newH : newH}:${newM < 10 ? '0' + newM : newM}`;
+      }
+
+      function calculateMinutesBetween24(start24, end24) {
+        if (!start24 || !end24) return 60;
+        const [sh, sm] = start24.split(':').map(Number);
+        const [eh, em] = end24.split(':').map(Number);
+        let diff = (eh * 60 + em) - (sh * 60 + sm);
+        if (diff <= 0) diff += 24 * 60;
+        return diff;
+      }
+
+      function handleCustomTimeChange() {
+        const startInput = document.getElementById('customStartTime');
+        const endInput = document.getElementById('customEndTime');
+        if (!startInput || !endInput) return;
+
+        if (!startInput.value) startInput.value = '18:00';
+        
+        endInput.value = addMinutesToTime24(startInput.value, activeCycleDuration);
+
+        const start12 = formatTime12h(startInput.value);
+        const end12 = formatTime12h(endInput.value);
+        const formattedSlot = `${start12} - ${end12}`;
+
+        updateTimeSlotPreview(formattedSlot, `${activeCycleDuration} min custom wash`);
+      }
+
+      function handleCustomEndTimeChange() {
+        const startInput = document.getElementById('customStartTime');
+        const endInput = document.getElementById('customEndTime');
+        if (!startInput || !endInput || !startInput.value || !endInput.value) return;
+
+        const diffMins = calculateMinutesBetween24(startInput.value, endInput.value);
+        activeCycleDuration = diffMins;
+
+        const allDurationBtns = document.querySelectorAll('.duration-btn');
+        allDurationBtns.forEach((b) => {
+          b.className = 'duration-btn py-1 px-1.5 text-center rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-[11px] text-zinc-700 transition';
+          const sub = b.querySelector('span');
+          if (sub) sub.className = 'text-[9px] text-zinc-400 block';
+        });
+
+        const start12 = formatTime12h(startInput.value);
+        const end12 = formatTime12h(endInput.value);
+        const formattedSlot = `${start12} - ${end12}`;
+
+        updateTimeSlotPreview(formattedSlot, `${diffMins} min cycle`);
+      }
+
+      function updateTimeSlotPreview(slotStr, durationLabel) {
+        const slotInput = document.getElementById('poolTimeSlot');
+        const previewEl = document.getElementById('timeSlotPreview');
+        const durationEl = document.getElementById('timeSlotDurationBadge');
+
+        if (slotInput) slotInput.value = slotStr;
+        if (previewEl) previewEl.textContent = slotStr;
+        if (durationEl && durationLabel) durationEl.textContent = durationLabel;
+      }
+
+      function openHostModal() {
+        const modal = document.getElementById('hostModal');
+        // Pre-fill with current user info if exists
+        if (currentUser.name) document.getElementById('hostName').value = currentUser.name;
+        if (currentUser.block) {
+          document.getElementById('hostBlock').value = currentUser.block;
+          syncMachineWithBlock(currentUser.block);
+        }
+        if (currentUser.room) document.getElementById('hostRoom').value = currentUser.room;
+
+        // Initialize schedule date & time controls
+        initScheduleControls();
+
+        const form = document.getElementById('hostForm');
+        if (form) form.scrollTop = 0;
+
+        modal.classList.remove('modal-hidden');
+        setTimeout(() => syncWheelVisuals(false), 50);
+      }
+
+      function closeHostModal() {
+        const modal = document.getElementById('hostModal');
+        modal.classList.add('modal-hidden');
+      }
+
+      function syncMachineWithBlock(blockVal) {
+        // Automatically selects a sensible machine for the selected block
+        const radios = document.getElementsByName('machineChoice');
+        if (blockVal === 'Block A') {
+          for (const r of radios) {
+            if (r.value === 'Machine A1') r.checked = true;
+          }
+        } else {
+          for (const r of radios) {
+            if (r.value === 'Machine B1') r.checked = true;
+          }
+        }
+      }
+
+      function handleCreatePool(e) {
+        e.preventDefault();
+
+        const name = document.getElementById('hostName').value.trim();
+        const block = document.getElementById('hostBlock').value;
+        const room = document.getElementById('hostRoom').value.trim();
+
+        const machineChoiceEl = document.querySelector('input[name="machineChoice"]:checked');
+        const machine = machineChoiceEl ? machineChoiceEl.value : 'Machine A1';
+        const machineBlock = machineChoiceEl ? machineChoiceEl.getAttribute('data-block') : block;
+
+        const date = document.getElementById('poolDate').value;
+        const timeSlot = document.getElementById('poolTimeSlot').value;
+        const maxParticipants = parseInt(document.getElementById('poolCapacity').value, 10);
+        const notes = document.getElementById('poolNotes').value.trim();
+
+        if (!name || !room) {
+          alert('Please enter your full name and room number.');
+          return;
+        }
+
+        // Save current user for convenience
+        currentUser = { name, block, room };
+        saveCurrentUser();
+
+        // Create Pool Object
+        const newPool = {
+          id: 'pool-' + Date.now(),
+          machine: machine,
+          block: machineBlock,
+          date: date,
+          timeSlot: timeSlot,
+          maxParticipants: maxParticipants,
+          notes: notes,
+          createdAt: Date.now(),
+          host: {
+            name: name,
+            block: block,
+            room: room,
+          },
+          members: [
+            {
+              id: 'mem-' + Date.now(),
+              name: name,
+              block: block,
+              room: room,
+              isHost: true,
+              joinedAt: Date.now(),
+            },
+          ],
+          messages: [
+            {
+              id: 'msg-' + Date.now(),
+              senderName: name,
+              senderBlock: block,
+              senderRoom: room,
+              text: `Host created pool on ${machine}. "${notes || 'Ready to share wash cycle.'}"`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              createdAt: Date.now(),
+            },
+          ],
+        };
+
+        // Insert at beginning of feed
+        poolsState.unshift(newPool);
+        savePoolsState();
+
+        closeHostModal();
+        renderMachineStatus();
+        renderPoolsFeed();
+        showToast(`Pool created on ${machine}! You are member 1/${maxParticipants}.`);
+      }
+
+      // -------------------------------------------------------------------------
+      // MODAL 2: "Join a Pool" Handlers
+      // -------------------------------------------------------------------------
+      function openJoinModal(poolId) {
+        const pool = poolsState.find((p) => p.id === poolId);
+        if (!pool) return;
+
+        const modal = document.getElementById('joinModal');
+        document.getElementById('joinTargetPoolId').value = pool.id;
+
+        // Pre-fill user data
+        if (currentUser.name) document.getElementById('joinName').value = currentUser.name;
+        if (currentUser.block) document.getElementById('joinBlock').value = currentUser.block;
+        if (currentUser.room) document.getElementById('joinRoom').value = currentUser.room;
+
+        const summaryBox = document.getElementById('joinPoolSummary');
+        const slotsLeft = pool.maxParticipants - pool.members.length;
+
+        summaryBox.innerHTML = `
+          <div class="flex items-center justify-between pb-2 border-b border-zinc-200">
+            <div>
+              <span class="font-semibold text-zinc-900">${pool.machine}</span>
+              <span class="text-zinc-400">•</span>
+              <span class="text-zinc-600">${pool.block}</span>
+            </div>
+            <span class="text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              ${slotsLeft} slot${slotsLeft > 1 ? 's' : ''} remaining
+            </span>
+          </div>
+          <div class="text-zinc-600 text-[11px] flex items-center justify-between">
+            <span>Date & Time: <strong>${formatDisplayDate(pool.date)}</strong>, <strong>${pool.timeSlot}</strong></span>
+          </div>
+          <div class="text-zinc-600 text-[11px]">
+            <span>Host: <strong>${pool.host.name}</strong> (${pool.host.block}, Room ${pool.host.room})</span>
+          </div>
+          <div class="pt-1 text-[11px] text-zinc-500">
+            Current Members: ${pool.members.map((m) => `${m.name} (${m.block === 'Block A' ? 'A' : 'B'}-${m.room})`).join(', ')}
+          </div>
+        `;
+
+        modal.classList.remove('modal-hidden');
+      }
+
+      function closeJoinModal() {
+        const modal = document.getElementById('joinModal');
+        modal.classList.add('modal-hidden');
+      }
+
+      function handleConfirmJoin(e) {
+        e.preventDefault();
+
+        const poolId = document.getElementById('joinTargetPoolId').value;
+        const pool = poolsState.find((p) => p.id === poolId);
+        if (!pool) return;
+
+        const name = document.getElementById('joinName').value.trim();
+        const block = document.getElementById('joinBlock').value;
+        const room = document.getElementById('joinRoom').value.trim();
+
+        if (!name || !room) {
+          alert('Please enter your full name and room number.');
+          return;
+        }
+
+        // Check if pool is already full
+        if (pool.members.length >= pool.maxParticipants) {
+          alert('Sorry, this wash pool has just reached maximum capacity.');
+          closeJoinModal();
+          renderPoolsFeed();
+          return;
+        }
+
+        // Check if already in pool
+        const alreadyJoined = pool.members.some(
+          (m) => m.name.toLowerCase() === name.toLowerCase() && m.room === room
+        );
+        if (alreadyJoined) {
+          alert('You are already registered in this wash pool!');
+          closeJoinModal();
+          openChatModal(pool.id);
+          return;
+        }
+
+        // Save user profile for persistence
+        currentUser = { name, block, room };
+        saveCurrentUser();
+
+        // Add member
+        const newMember = {
+          id: 'mem-' + Date.now(),
+          name: name,
+          block: block,
+          room: room,
+          isHost: false,
+          joinedAt: Date.now(),
+        };
+
+        pool.members.push(newMember);
+
+        // Add auto chat announcement
+        const isNowFull = pool.members.length >= pool.maxParticipants;
+        pool.messages.push({
+          id: 'msg-' + Date.now(),
+          senderName: 'System',
+          senderBlock: block,
+          senderRoom: room,
+          text: `${name} (Room ${room}) joined the pool! (${pool.members.length}/${pool.maxParticipants} slots filled${isNowFull ? ' - Pool is now FULL' : ''})`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          createdAt: Date.now(),
+        });
+
+        savePoolsState();
+        closeJoinModal();
+        renderMachineStatus();
+        renderPoolsFeed();
+        showToast(`Joined ${pool.machine} wash pool!`);
+
+        // Automatically open the pool's chat for seamless collaboration
+        openChatModal(pool.id);
+      }
+
+      // -------------------------------------------------------------------------
+      // MODAL 3: In-Pool Chat Handlers
+      // -------------------------------------------------------------------------
+      function openChatModal(poolId) {
+        activeChatPoolId = poolId;
+        const pool = poolsState.find((p) => p.id === poolId);
+        if (!pool) return;
+
+        const modal = document.getElementById('chatModal');
+        document.getElementById('chatMachineTitle').textContent = `${pool.machine} (${pool.block})`;
+        document.getElementById('chatTimeSlotBadge').textContent = `${formatDisplayDate(pool.date)} • ${pool.timeSlot}`;
+
+        renderChatMembers(pool);
+        renderChatMessages(pool);
+        updateChatPostingAsBadge();
+
+        modal.classList.remove('modal-hidden');
+
+        // Focus message input
+        setTimeout(() => {
+          const input = document.getElementById('chatMessageInput');
+          if (input) input.focus();
+        }, 150);
+      }
+
+      function closeChatModal() {
+        const modal = document.getElementById('chatModal');
+        modal.classList.add('modal-hidden');
+        activeChatPoolId = null;
+      }
+
+      function updateChatPostingAsBadge() {
+        const badge = document.getElementById('chatPostingAsBadge');
+        if (!badge) return;
+        if (currentUser.name && currentUser.room) {
+          badge.textContent = `${currentUser.name} (${currentUser.block === 'Block A' ? 'A' : 'B'}-${currentUser.room})`;
+        } else {
+          badge.textContent = 'Resident (Click to set)';
+        }
+      }
+
+      function renderChatMembers(pool) {
+        const countSpan = document.getElementById('chatMemberCount');
+        const availabilitySpan = document.getElementById('chatSlotAvailability');
+        const list = document.getElementById('chatMembersList');
+        if (!list) return;
+
+        countSpan.textContent = `${pool.members.length}/${pool.maxParticipants}`;
+        if (pool.members.length >= pool.maxParticipants) {
+          availabilitySpan.textContent = 'Cycle Full';
+          availabilitySpan.className = 'text-[11px] text-zinc-500 font-medium';
+        } else {
+          const left = pool.maxParticipants - pool.members.length;
+          availabilitySpan.textContent = `${left} slot${left > 1 ? 's' : ''} still open`;
+          availabilitySpan.className = 'text-[11px] text-emerald-600 font-medium';
+        }
+
+        list.innerHTML = pool.members.map((m) => {
+          const initials = m.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+          const isMe =
+            currentUser.name &&
+            m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase() &&
+            m.room.trim() === currentUser.room.trim();
+
+          return `
+            <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] border ${isMe ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-50 text-zinc-800 border-zinc-200'}">
+              <span class="w-4 h-4 rounded-full ${isMe ? 'bg-zinc-700 text-white' : 'bg-zinc-200 text-zinc-700'} flex items-center justify-center text-[9px] font-bold">
+                ${initials}
+              </span>
+              <span class="font-medium">${m.name}</span>
+              <span class="text-[10px] ${isMe ? 'text-zinc-300' : 'text-zinc-500'}">(${m.block === 'Block A' ? 'A' : 'B'}-${m.room})</span>
+              ${m.isHost ? `<span class="text-[9px] ${isMe ? 'text-amber-300' : 'text-amber-600'} font-semibold ml-0.5">★ HOST</span>` : ''}
+              ${isMe ? '<span class="text-[9px] text-emerald-400 font-semibold ml-0.5">• You</span>' : ''}
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderChatMessages(pool) {
+        const box = document.getElementById('chatMessagesBox');
+        if (!box) return;
+
+        if (!pool.messages || pool.messages.length === 0) {
+          box.innerHTML = `
+            <div class="text-center py-10 text-zinc-400 text-xs">
+              No messages yet. Send a message to coordinate with other wash members!
+            </div>
+          `;
+          return;
+        }
+
+        box.innerHTML = pool.messages.map((msg) => {
+          const isSystem = msg.senderName === 'System';
+          if (isSystem) {
+            return `
+              <div class="flex justify-center my-1.5">
+                <span class="bg-zinc-100 border border-zinc-200 text-zinc-500 text-[10px] px-2.5 py-1 rounded-full text-center">
+                  ${msg.text} • ${msg.timestamp}
+                </span>
+              </div>
+            `;
+          }
+
+          const isMe =
+            currentUser.name &&
+            msg.senderName.trim().toLowerCase() === currentUser.name.trim().toLowerCase() &&
+            msg.senderRoom.trim() === currentUser.room.trim();
+
+          const initials = msg.senderName.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+
+          if (isMe) {
+            return `
+              <div class="flex flex-col items-end space-y-1">
+                <div class="flex items-center gap-1.5 text-[10px] text-zinc-400">
+                  <span class="font-medium text-zinc-600">You (${msg.senderBlock === 'Block A' ? 'A' : 'B'}-${msg.senderRoom})</span>
+                  <span>•</span>
+                  <span>${msg.timestamp}</span>
+                </div>
+                <div class="bg-zinc-900 text-white px-3.5 py-2 rounded-2xl rounded-tr-sm text-xs max-w-[85%] shadow-sm break-words">
+                  ${escapeHtml(msg.text)}
+                </div>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="flex items-start gap-2.5 space-y-1">
+                <div class="w-7 h-7 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center text-[10px] font-semibold flex-shrink-0 mt-1">
+                  ${initials}
+                </div>
+                <div class="flex flex-col items-start max-w-[85%]">
+                  <div class="flex items-center gap-1.5 text-[10px] text-zinc-500 mb-0.5">
+                    <span class="font-semibold text-zinc-800">${escapeHtml(msg.senderName)}</span>
+                    <span class="text-zinc-400">(${msg.senderBlock === 'Block A' ? 'A' : 'B'}-${escapeHtml(msg.senderRoom)})</span>
+                    <span>•</span>
+                    <span>${msg.timestamp}</span>
+                  </div>
+                  <div class="bg-white border border-zinc-200 text-zinc-800 px-3.5 py-2 rounded-2xl rounded-tl-sm text-xs shadow-sm break-words">
+                    ${escapeHtml(msg.text)}
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        }).join('');
+
+        // Scroll to bottom
+        box.scrollTop = box.scrollHeight;
+      }
+
+      function handleSendChatMessage(e) {
+        e.preventDefault();
+        if (!activeChatPoolId) return;
+
+        const pool = poolsState.find((p) => p.id === activeChatPoolId);
+        if (!pool) return;
+
+        const input = document.getElementById('chatMessageInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Ensure user has identity
+        if (!currentUser.name || !currentUser.room) {
+          openUserProfileModal();
+          showToast('Please set your resident name and room first');
+          return;
+        }
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        if (!pool.messages) pool.messages = [];
+
+        pool.messages.push({
+          id: 'msg-' + Date.now(),
+          senderName: currentUser.name,
+          senderBlock: currentUser.block,
+          senderRoom: currentUser.room,
+          text: text,
+          timestamp: timeStr,
+          createdAt: Date.now(),
+        });
+
+        savePoolsState();
+        input.value = '';
+
+        renderChatMessages(pool);
+        renderPoolsFeed(); // update message count on cards
+      }
+
+      function insertQuickMessage(text) {
+        const input = document.getElementById('chatMessageInput');
+        if (input) {
+          input.value = text;
+          input.focus();
+        }
+      }
+
+      function promptSwitchIdentity() {
+        openUserProfileModal();
+      }
+
+      // -------------------------------------------------------------------------
+      // MODAL 4: User Profile Handlers
+      // -------------------------------------------------------------------------
+      function openUserProfileModal() {
+        const modal = document.getElementById('profileModal');
+        document.getElementById('profName').value = currentUser.name || '';
+        document.getElementById('profBlock').value = currentUser.block || 'Block A';
+        document.getElementById('profRoom').value = currentUser.room || '';
+        modal.classList.remove('modal-hidden');
+      }
+
+      function closeUserProfileModal() {
+        const modal = document.getElementById('profileModal');
+        modal.classList.add('modal-hidden');
+      }
+
+      function handleSaveProfile(e) {
+        e.preventDefault();
+        const name = document.getElementById('profName').value.trim();
+        const block = document.getElementById('profBlock').value;
+        const room = document.getElementById('profRoom').value.trim();
+
+        if (!name || !room) {
+          alert('Please enter both name and room number.');
+          return;
+        }
+
+        currentUser = { name, block, room };
+        saveCurrentUser();
+        closeUserProfileModal();
+        updateChatPostingAsBadge();
+
+        if (activeChatPoolId) {
+          const pool = poolsState.find((p) => p.id === activeChatPoolId);
+          if (pool) renderChatMessages(pool);
+        }
+        renderPoolsFeed();
+        showToast('Profile updated: ' + name + ' (' + (block === 'Block A' ? 'A' : 'B') + '-' + room + ')');
+      }
+
+      // -------------------------------------------------------------------------
+      // Helpers & Toast
+      // -------------------------------------------------------------------------
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        const text = document.getElementById('toastMessage');
+        if (!toast || !text) return;
+
+        text.textContent = message;
+        toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+
+        setTimeout(() => {
+          toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+        }, 2800);
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      // Run on DOM load
+      window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+  </body>
+</html>

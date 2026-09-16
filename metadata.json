@@ -1,0 +1,6 @@
+{
+  "name": "Hostel Laundry Share",
+  "description": "A minimalist, Linear-style hostel laundry-sharing application to coordinate wash cycles, share machines across Block A and B, join pools, and chat with members.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
